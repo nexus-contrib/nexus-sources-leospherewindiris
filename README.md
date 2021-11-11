@@ -1,6 +1,6 @@
 # Nexus.Sources.LeosphereWindIris
 
-This data source extension makes it possible to read data files in the Gantner UDBF format into Nexus.
+This data source extension makes it possible to read data files in the Leosphere wind iris format into Nexus.
 
 To use it, put a `config.json` with the following sample content into the database root folder:
 
@@ -9,14 +9,32 @@ To use it, put a `config.json` with the following sample content into the databa
   "/A/B/C": {
     "FileSources": [
       {
-        "Name": "group-A",
+        "Name": "Lidar;real_time",
         "PathSegments": [
-          "'group-A'",
+          "'Lidar'",
           "yyyy-MM"
         ],
-        "FileTemplate": "'000__0_'yyyy-MM-dd_HH-mm-ss_000000'.dat'",
+        "FileTemplate": "'WIPO0000000_real_time_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
         "FilePeriod": "00:10:00",
-        "UtcOffset": "00:00:00"
+        "UtcOffset": "00:10:00",
+        "CustomParameters": {
+          "SamplePeriod": "00:00:04",
+          "Distances": "50, 80, 120, 140, 160, 180, 200, 220, 240, 260, 280, 320, 360, 400, 450, 500, 550, 600, 650, 700"
+        }
+      },
+      {
+        "Name": "Lidar;average",
+        "PathSegments": [
+          "'Lidar'",
+          "yyyy-MM"
+        ],
+        "FileTemplate": "'WIPO0000000_average_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
+        "FilePeriod": "1.00:00:00",
+        "UtcOffset": "1.00:00:00",
+        "CustomParameters": {
+          "SamplePeriod": "00:10:00",
+          "Distances": "50, 80, 120, 140, 160, 180, 200, 220, 240, 260, 280, 320, 360, 400, 450, 500, 550, 600, 650, 700"
+        }
       }
     ]
   }
