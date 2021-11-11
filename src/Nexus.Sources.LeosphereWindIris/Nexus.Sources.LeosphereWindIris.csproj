@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
+    <RestoreAdditionalProjectSources>
+      https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--<PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.1.69">
+      <ExcludeAssets>runtime;native</ExcludeAssets>
+    </PackageReference>-->
+    <PackageReference Include="UDBF.NET" Version="2.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Nexusforge\Nexus\src\Nexus.Extensibility\Nexus.Extensibility.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
+    <!--<PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.1.69" />-->
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Nexus.Sources.LeosphereWindIris\Nexus.Sources.LeosphereWindIris.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Database\config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Database\Lidar\2020-07\WIPO0000000_real_time_data_2020-07-31_23-40-00.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Database\Lidar\2020-07\WIPO0000000_real_time_data_2020-07-31_23-50-00.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Database\Lidar\2020-08\WIPO0000000_average_data_2020-08-08_00-00-00.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Database\Lidar\2020-08\WIPO0000000_real_time_data_2020-08-01_00-00-00.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Database\Lidar\2020-08\WIPO0000000_real_time_data_2020-08-01_00-10-00.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
