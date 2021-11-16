@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Nexus.Sources.LeosphereWindIris
 {
-    [ExtensionIdentification("LeosphereWindIris", "Leosphere Wind Iris", "Provides access to databases with Leosphere wind iris files.")]
+    [ExtensionDescription("Provides access to databases with Leosphere wind iris files.")]
     public class LeosphereWindIrisDataSource : StructuredFileDataSource
     {
         #region Fields
