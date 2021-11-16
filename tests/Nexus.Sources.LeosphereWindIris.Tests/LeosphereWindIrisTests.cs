@@ -11,13 +11,13 @@ using Xunit;
 
 namespace Nexus.Sources.LeosphereWindIris.Tests
 {
-    public class LeosphereWindIrisDataSourceTests
+    public class LeosphereWindIrisTests
     {
         [Fact]
         public async Task ProvidesCatalog()
         {
             // arrange
-            var dataSource = new LeosphereWindIrisDataSource() as IDataSource;
+            var dataSource = new LeosphereWindIris() as IDataSource;
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
@@ -49,7 +49,7 @@ namespace Nexus.Sources.LeosphereWindIris.Tests
         public async Task ProvidesDataAvailability()
         {
             // arrange
-            var dataSource = new LeosphereWindIrisDataSource() as IDataSource;
+            var dataSource = new LeosphereWindIris() as IDataSource;
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
@@ -87,7 +87,7 @@ namespace Nexus.Sources.LeosphereWindIris.Tests
         public async Task CanReadFullDay_Real_Time()
         {
             // arrange
-            var dataSource = new LeosphereWindIrisDataSource() as IDataSource;
+            var dataSource = new LeosphereWindIris() as IDataSource;
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
@@ -130,7 +130,7 @@ namespace Nexus.Sources.LeosphereWindIris.Tests
         public async Task CanReadFullDay_Average()
         {
             // arrange
-            var dataSource = new LeosphereWindIrisDataSource() as IDataSource;
+            var dataSource = new LeosphereWindIris() as IDataSource;
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
