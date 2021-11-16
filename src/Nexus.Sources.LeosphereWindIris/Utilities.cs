@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Nexus.Sources.LeosphereWindIris
+namespace Nexus.Sources
 {
     public static class Utilities
     {

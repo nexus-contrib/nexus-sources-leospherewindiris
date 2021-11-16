@@ -11,7 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Nexus.Sources.LeosphereWindIris
+namespace Nexus.Sources
 {
     [ExtensionDescription("Provides access to databases with Leosphere wind iris files.")]
     public class LeosphereWindIris : StructuredFileDataSource
