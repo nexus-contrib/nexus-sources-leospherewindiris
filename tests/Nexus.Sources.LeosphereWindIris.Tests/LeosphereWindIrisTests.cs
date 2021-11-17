@@ -36,8 +36,8 @@ namespace Nexus.Sources.Tests
             // assert
             var expectedIds = new List<string>() { "Lidar_050m_3_LOS_index", "Lidar_080m_3_LOS_index" };
             var expectedGroups = new List<string>() { "Lidar (050 m)", "Lidar (080 m)" };
-            var expectedStartDate = new DateTime(2020, 07, 31, 23, 30, 00, DateTimeKind.Utc);
-            var expectedEndDate = new DateTime(2020, 08, 08, 00, 00, 00, DateTimeKind.Utc);
+            var expectedStartDate = new DateTime(2020, 07, 28, 00, 00, 00, DateTimeKind.Utc);
+            var expectedEndDate = new DateTime(2020, 08, 01, 00, 10, 00, DateTimeKind.Utc);
 
             Assert.True(expectedIds.SequenceEqual(actualIds));
             Assert.True(expectedGroups.SequenceEqual(actualGroups));
@@ -60,8 +60,8 @@ namespace Nexus.Sources.Tests
 
             // act
             var actual = new Dictionary<DateTime, double>();
-            var begin = new DateTime(2020, 07, 30, 0, 0, 0, DateTimeKind.Utc);
-            var end = new DateTime(2020, 08, 10, 0, 0, 0, DateTimeKind.Utc);
+            var begin = new DateTime(2020, 07, 27, 0, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
 
             var currentBegin = begin;
 
@@ -72,13 +72,16 @@ namespace Nexus.Sources.Tests
             }
 
             // assert
-            var expected = new SortedDictionary<DateTime, double>(Enumerable.Range(0, 11).ToDictionary(
+            var expected = new SortedDictionary<DateTime, double>(Enumerable.Range(0, 6).ToDictionary(
                     i => begin.AddDays(i),
                     i => 0.0));
 
-            expected[begin.AddDays(1)] = (3 / 144.0 + 0 / 1) / 2;
-            expected[begin.AddDays(2)] = (1 / 144.0 + 0 / 1) / 2;
-            expected[begin.AddDays(8)] = (0 / 144.0 + 1 / 1) / 2;
+            expected[begin.AddDays(0)] = (0 / 144.0 + 0 / 1) / 2; // 27.
+            expected[begin.AddDays(1)] = (0 / 144.0 + 1 / 1) / 2; // 28.
+            expected[begin.AddDays(2)] = (0 / 144.0 + 0 / 1) / 2; // 29.
+            expected[begin.AddDays(3)] = (0 / 144.0 + 0 / 1) / 2; // 30.
+            expected[begin.AddDays(4)] = (3 / 144.0 + 0 / 1) / 2; // 31.
+            expected[begin.AddDays(5)] = (1 / 144.0 + 0 / 1) / 2; // 01.
 
             Assert.True(expected.SequenceEqual(new SortedDictionary<DateTime, double>(actual)));
         }
@@ -145,8 +148,8 @@ namespace Nexus.Sources.Tests
             var representation = resource.Representations.First();
             var catalogItem = new CatalogItem(catalog, resource, representation);
 
-            var begin = new DateTime(2020, 08, 07, 0, 0, 0, DateTimeKind.Utc);
-            var end = new DateTime(2020, 08, 08, 0, 0, 0, DateTimeKind.Utc);
+            var begin = new DateTime(2020, 07, 28, 0, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(2020, 07, 29, 0, 0, 0, DateTimeKind.Utc);
             var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
             var result = new ReadRequest(catalogItem, data, status);

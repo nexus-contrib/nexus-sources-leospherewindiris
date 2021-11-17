@@ -28,7 +28,7 @@
     <None Update="Database\Lidar\2020-07\WIPO0000000_real_time_data_2020-07-31_23-50-00.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Database\Lidar\2020-08\WIPO0000000_average_data_2020-08-08_00-00-00.csv">
+    <None Update="Database\Lidar\2020-07\WIPO0000000_average_data_2020-07-29_00-00-00.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Database\Lidar\2020-08\WIPO0000000_real_time_data_2020-08-01_00-00-00.csv">

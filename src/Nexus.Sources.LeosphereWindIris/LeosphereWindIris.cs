@@ -104,8 +104,8 @@ namespace Nexus.Sources
                 }
                 else
                 {
-                    // this.TryGetFirstFile works only with non-empty folders (2020-07 folder does not contain averaged data)
-                    var filePath = Directory.EnumerateFiles(this.Root, $"*{mode}*.csv", SearchOption.AllDirectories).First();
+                    if (!this.TryGetFirstFile(fileSource, out var filePath))
+                        continue;
 
                     filePaths = new[] { filePath };
                 }
