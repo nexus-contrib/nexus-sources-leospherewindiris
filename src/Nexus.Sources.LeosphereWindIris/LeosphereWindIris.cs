@@ -269,7 +269,11 @@ namespace Nexus.Sources
                     // go
                     var linesToSkip = distances.Count * 4;
 
-                    if (info.FileLength * linesToSkip == lines.Length - 2) // the files have an empty extra line at the end
+                    // the files have two empty line at the end ... except when they are exported
+                    // by the Leosphere software, then there is just one line -.-
+                    var requiredLineCount = info.FileLength * linesToSkip;
+
+                    if (lines.Length >= requiredLineCount && !string.IsNullOrWhiteSpace(lines[requiredLineCount - 1]))
                     {
                         var result = new double[info.FileBlock];
 
@@ -307,7 +311,7 @@ namespace Nexus.Sources
                 }
                 else
                 {
-                    this.Context.Logger.LogDebug("Distance {Distance} does not exist.", distance);
+                    this.Context.Logger.LogDebug("Distance {Distance} does not exist", distance);
                 }
             }, cancellationToken);
         }
