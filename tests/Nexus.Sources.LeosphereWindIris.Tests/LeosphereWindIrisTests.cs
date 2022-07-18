@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -21,16 +22,16 @@ namespace Nexus.Sources.Tests
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
-                Configuration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance);
+                SystemConfiguration: default!,
+                SourceConfiguration: default!,
+                RequestConfiguration: default!);
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             // act
             var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var actualIds = actual.Resources.Select(resource => resource.Id).Take(2).ToList();
-            var actualGroups = actual.Resources
-                .SelectMany(resource => resource.Properties.Where(entry => entry.Key.StartsWith("Groups")).Select(entry => entry.Value)).Take(2).ToList();
+            var actualIds = actual.Resources.Take(2).Select(resource => resource.Id).ToList();
+            var actualGroups = actual.Resources.Take(2).SelectMany(resource => GetArrayOrDefault(resource.Properties, "groups")).ToList();
             var actualTimeRange = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
             // assert
@@ -43,6 +44,18 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedGroups.SequenceEqual(actualGroups));
             Assert.Equal(expectedStartDate, actualTimeRange.Begin);
             Assert.Equal(expectedEndDate, actualTimeRange.End);
+
+            string[] GetArrayOrDefault(JsonElement? element, string propertyName)
+            {
+                if (!element.HasValue)
+                    return new string[0];
+
+                if (element.Value.TryGetProperty(propertyName, out var result))
+                    return result.EnumerateArray().Select(current => current.GetString()!).ToArray();
+
+                else
+                    return new string[0];
+            }
         }
 
         [Fact]
@@ -53,10 +66,11 @@ namespace Nexus.Sources.Tests
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
-                Configuration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance);
+                SystemConfiguration: default!,
+                SourceConfiguration: default!,
+                RequestConfiguration: default!);
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             // act
             var actual = new Dictionary<DateTime, double>();
@@ -94,10 +108,11 @@ namespace Nexus.Sources.Tests
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
-                Configuration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance);
+                SystemConfiguration: default!,
+                SourceConfiguration: default!,
+                RequestConfiguration: default!);
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
@@ -110,7 +125,7 @@ namespace Nexus.Sources.Tests
             var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
             var result = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, new Progress<double>(), CancellationToken.None);
+            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, default!, new Progress<double>(), CancellationToken.None);
 
             // assert
             void DoAssert()
@@ -137,10 +152,11 @@ namespace Nexus.Sources.Tests
 
             var context = new DataSourceContext(
                 ResourceLocator: new Uri("Database", UriKind.Relative),
-                Configuration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance);
+                SystemConfiguration: default!,
+                SourceConfiguration: default!,
+                RequestConfiguration: default!);
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
@@ -153,7 +169,7 @@ namespace Nexus.Sources.Tests
             var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
             var result = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, new Progress<double>(), CancellationToken.None);
+            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, default!, new Progress<double>(), CancellationToken.None);
 
             // assert
             void DoAssert()
