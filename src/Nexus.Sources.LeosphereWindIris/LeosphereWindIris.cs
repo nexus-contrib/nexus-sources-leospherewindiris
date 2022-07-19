@@ -3,6 +3,7 @@ using Nexus.DataModel;
 using Nexus.Extensibility;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -19,6 +20,11 @@ namespace Nexus.Sources
         "https://github.com/Apollo3zehn/nexus-sources-leospherewindiris")]
     public class LeosphereWindIris : StructuredFileDataSource
     {
+        record CatalogDescription(
+            string Title,
+            Dictionary<string, FileSource> FileSources, 
+            JsonElement? AdditionalProperties);
+
         #region Fields
 
         private Dictionary<string, CatalogDescription> _config = default!;
@@ -51,10 +57,10 @@ namespace Nexus.Sources
 
         protected override async Task SetContextAsync(DataSourceContext context, ILogger logger, CancellationToken cancellationToken)
         {
-            this.Context = context;
-            this.Logger = logger;
+            Context = context;
+            Logger = logger;
 
-            var configFilePath = Path.Combine(this.Root, "config.json");
+            var configFilePath = Path.Combine(Root, "config.json");
 
             if (!File.Exists(configFilePath))
                 throw new Exception($"Configuration file {configFilePath} not found.");
@@ -63,28 +69,11 @@ namespace Nexus.Sources
             _config = JsonSerializer.Deserialize<Dictionary<string, CatalogDescription>>(jsonString) ?? throw new Exception("config is null");
         }
 
-        protected override Task<FileSourceProvider> GetFileSourceProviderAsync(CancellationToken cancellationToken)
+        protected override Task<Func<string, Dictionary<string, FileSource>>> GetFileSourceProviderAsync(
+            CancellationToken cancellationToken)
         {
-            var allFileSources = _config.ToDictionary(
-                config => config.Key,
-                config => config.Value.FileSources.Cast<FileSource>().ToArray());
-
-            var fileSourceProvider = new FileSourceProvider(
-                All: allFileSources,
-                Single: catalogItem =>
-                {
-                    var properties = catalogItem.Resource.Properties;
-
-                    if (properties is null)
-                        throw new ArgumentNullException(nameof(properties));
-
-                    var fileSourceName = properties.Value.GetProperty("FileSource").GetString();
-
-                    return allFileSources[catalogItem.Catalog.Id]
-                        .First(fileSource => ((ExtendedFileSource)fileSource).Name == fileSourceName);
-                });
-
-            return Task.FromResult(fileSourceProvider);
+            return Task.FromResult<Func<string, Dictionary<string, FileSource>>>(
+                catalogId => _config[catalogId].FileSources);
         }
 
         protected override Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken)
@@ -101,22 +90,24 @@ namespace Nexus.Sources
             var catalogDescription = _config[catalogId];
             var catalog = new ResourceCatalog(id: catalogId);
 
-            foreach (var fileSource in catalogDescription.FileSources)
+            foreach (var (fileSourceId, fileSource) in catalogDescription.FileSources)
             {
-                var fileSourceNameParts = fileSource.Name.Split(';');
-                var instrument = fileSourceNameParts[0];
-                var mode = fileSourceNameParts[1];
+                var fileSourceIdParts = fileSourceId.Split(';');
+                var instrument = fileSourceIdParts[0];
+                var mode = fileSourceIdParts[1];
                 var filePaths = default(string[]);
+                var catalogSourceFiles = fileSource.AdditionalProperties.GetStringArray("CatalogSourceFiles");
 
-                if (fileSource.CatalogSourceFiles is not null)
+                if (catalogSourceFiles is not null)
                 {
-                    filePaths = fileSource.CatalogSourceFiles
-                        .Select(filePath => Path.Combine(this.Root, filePath))
+                    filePaths = catalogSourceFiles
+                        .Where(filePath => filePath is not null)
+                        .Select(filePath => Path.Combine(Root, filePath!))
                         .ToArray();
                 }
                 else
                 {
-                    if (!this.TryGetFirstFile(fileSource, out var filePath))
+                    if (!TryGetFirstFile(fileSource, out var filePath))
                         continue;
 
                     filePaths = new[] { filePath };
@@ -131,21 +122,31 @@ namespace Nexus.Sources
 
                     using var file = new StreamReader(File.OpenRead(filePath));
 
-                    var customParamters = fileSource.CustomParameters;
+                    var additionalProperties = fileSource.AdditionalProperties;
 
-                    if (customParamters is null)
+                    if (additionalProperties is null)
                         throw new Exception("custom parameters is null");
 
-                    var samplePeriod = TimeSpan.Parse(customParamters["SamplePeriod"]);
+                    var samplePeriodString = additionalProperties.GetStringValue("SamplePeriod");
 
-                    var distances = customParamters["Distances"]
+                    if (samplePeriodString is null)
+                        throw new Exception("The configuration parameter SamplePeriod is required.");
+
+                    var samplePeriod = TimeSpan.Parse(samplePeriodString);
+
+                    var distancesString = additionalProperties.GetStringValue("Distances");
+
+                    if (distancesString is null)
+                        throw new Exception("The configuration parameter Distances is required.");
+
+                    var distances = distancesString
                         .Split(",")
                         .Select(value => int.Parse(value))
                         .ToList();
 
                     var resources = mode == "real_time"
-                        ? this.GetRawResources(file, instrument, samplePeriod, fileSource, distances)
-                        : this.GetAverageResources(file, instrument, samplePeriod, fileSource, distances);
+                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId, fileSource, distances)
+                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId, fileSource, distances);
 
                     var duplicateKeys = resources.GroupBy(x => x.Id)
                         .Where(group => group.Count() > 1)
@@ -169,25 +170,13 @@ namespace Nexus.Sources
             if (properties is null)
                 throw new Exception("properties is null");
 
-            var groups = GetArrayOrDefault(properties, "groups");
+            var groups = properties.GetStringArray("groups")!;
 
-            if (groups.Any(group => group.Contains("avg")))
-                return this.ReadSingleAverageAsync(info, cancellationToken);
+            if (groups.Any(group => group!.Contains("avg")))
+                return ReadSingleAverageAsync(info, cancellationToken);
 
             else
-                return this.ReadSingleRawAsync(info, cancellationToken);
-
-            string[] GetArrayOrDefault(JsonElement? element, string propertyName)
-            {
-                if (!element.HasValue)
-                    return new string[0];
-
-                if (element.Value.TryGetProperty(propertyName, out var result))
-                    return result.EnumerateArray().Select(current => current.GetString()!).ToArray();
-
-                else
-                    return new string[0];
-            }
+                return ReadSingleRawAsync(info, cancellationToken);
         }
 
         private Task ReadSingleAverageAsync(ReadInfo info, CancellationToken cancellationToken)
@@ -200,7 +189,7 @@ namespace Nexus.Sources
                 var resourceName = resourceIdParts[2];
 
                 var lines = File.ReadAllLines(info.FilePath);
-                (var columns, var distances) = this.GetAverageFileParameters(lines);
+                (var columns, var distances) = GetAverageFileParameters(lines);
 
                 // column
                 var column = columns.IndexOf(resourceName);
@@ -255,7 +244,7 @@ namespace Nexus.Sources
                     }
                     else
                     {
-                        this.Logger.LogDebug("The actual buffer size does not match the expected size, which indicates an incomplete file");
+                        Logger.LogDebug("The actual buffer size does not match the expected size, which indicates an incomplete file");
                     }
                 }
             }, cancellationToken);
@@ -272,7 +261,7 @@ namespace Nexus.Sources
                 var resourceName = resourceIdParts[3];
 
                 var lines = File.ReadAllLines(info.FilePath);
-                (var columns, var distances, var firstBeam) = this.GetRawFileParameters(lines);
+                (var columns, var distances, var firstBeam) = GetRawFileParameters(lines);
 
                 // column
                 var column = columns.IndexOf(resourceName);
@@ -328,12 +317,12 @@ namespace Nexus.Sources
                     }
                     else
                     {
-                        this.Logger.LogDebug("The actual buffer size does not match the expected size, which indicates an incomplete file");
+                        Logger.LogDebug("The actual buffer size does not match the expected size, which indicates an incomplete file");
                     }
                 }
                 else
                 {
-                    this.Logger.LogDebug("Distance {Distance} does not exist", distance);
+                    Logger.LogDebug("Distance {Distance} does not exist", distance);
                 }
             }, cancellationToken);
         }
@@ -346,10 +335,10 @@ namespace Nexus.Sources
 
             var columns = headerLineParts.Select(value =>
             {
-                return Utilities
-                    .EnforceNamingConvention(value)
-                    .Replace("__", "_")
-                    .Trim('_');
+                if (!TryEnforceNamingConvention(value, out var name))
+                    throw new Exception($"The name {value} is not a valid resource id.");
+
+                return name;
             }).ToList();
 
             // distances
@@ -379,10 +368,10 @@ namespace Nexus.Sources
 
             var columns = headerLineParts.Select(value =>
             {
-                return Utilities
-                    .EnforceNamingConvention(value)
-                    .Replace("__", "_")
-                    .Trim('_');
+                if (!TryEnforceNamingConvention(value, out var name))
+                    throw new Exception($"The name {value} is not a valid resource id.");
+
+                return name;
             }).ToList();
 
             // first beam
@@ -411,7 +400,8 @@ namespace Nexus.Sources
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
-            ExtendedFileSource fileSource,
+            string fileSourceId,
+            FileSource fileSource,
             List<int> distances)
         {
             var line = file.ReadLine();
@@ -423,7 +413,9 @@ namespace Nexus.Sources
                 .Skip(1)
                 .SelectMany(value =>
                 {
-                    var name = Utilities.EnforceNamingConvention(value).Replace("__", "_").Trim('_');
+                    if (!TryEnforceNamingConvention(value, out var name))
+                        throw new Exception($"The name {value} is not a valid resource id.");
+                        
                     var resources = new List<Resource>();
 
                     foreach (var distance in distances)
@@ -436,7 +428,7 @@ namespace Nexus.Sources
 
                         var resource = new ResourceBuilder(id: resourceId)
                             .WithGroups($"{instrument} ({distance:D3} m, avg)")
-                            .WithProperty("FileSource", fileSource.Name)
+                            .WithProperty(StructuredFileDataSource.FileSourceKey, fileSourceId)
                             .AddRepresentation(representation)
                             .Build();
                         
@@ -451,7 +443,8 @@ namespace Nexus.Sources
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
-            ExtendedFileSource fileSource,
+            string fileSourceId,
+            FileSource fileSource,
             List<int> distances)
         {
             var line = file.ReadLine();
@@ -463,7 +456,9 @@ namespace Nexus.Sources
                 .Skip(1)
                 .SelectMany(value =>
                 {
-                    var name = Utilities.EnforceNamingConvention(value).Replace("__", "_").Trim('_');
+                    if (!TryEnforceNamingConvention(value, out var name))
+                        throw new Exception($"The name {value} is not a valid resource id.");
+
                     var resources = new List<Resource>();
 
                     for (int i = 0; i < 4; i++)
@@ -478,7 +473,7 @@ namespace Nexus.Sources
 
                             var resource = new ResourceBuilder(id: resourceId)
                                 .WithGroups($"{instrument} ({distance:D3} m)")
-                                .WithProperty("FileSource", fileSource.Name)
+                                .WithProperty(StructuredFileDataSource.FileSourceKey, fileSourceId)
                                 .AddRepresentation(representation)
                                 .Build();
                             
@@ -488,6 +483,16 @@ namespace Nexus.Sources
 
                     return resources;
                 }).ToList();
+        }
+
+        private bool TryEnforceNamingConvention(string resourceId, [NotNullWhen(returnValue: true)] out string newResourceId)
+        {
+            newResourceId = resourceId;
+            newResourceId = Resource.InvalidIdCharsExpression.Replace(newResourceId, "_");
+            newResourceId = Resource.InvalidIdStartCharsExpression.Replace(newResourceId, "_");
+            newResourceId = newResourceId.Replace("__", "_").Trim('_');
+
+            return Resource.ValidIdExpression.IsMatch(newResourceId);
         }
 
         #endregion

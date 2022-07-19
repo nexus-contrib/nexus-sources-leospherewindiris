@@ -17,7 +17,7 @@ To use it, put a `config.json` with the following sample content into the databa
         "FileTemplate": "'WIPO0000000_real_time_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
         "FilePeriod": "00:10:00",
         "UtcOffset": "00:10:00",
-        "CustomParameters": {
+        "AdditionalProperties": {
           "SamplePeriod": "00:00:04",
           "Distances": "50, 80, 120, 140, 160, 180, 200, 220, 240, 260, 280, 320, 360, 400, 450, 500, 550, 600, 650, 700"
         }
@@ -31,7 +31,7 @@ To use it, put a `config.json` with the following sample content into the databa
         "FileTemplate": "'WIPO0000000_average_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
         "FilePeriod": "1.00:00:00",
         "UtcOffset": "1.00:00:00",
-        "CustomParameters": {
+        "AdditionalProperties": {
           "SamplePeriod": "00:10:00",
           "Distances": "50, 80, 120, 140, 160, 180, 200, 220, 240, 260, 280, 320, 360, 400, 450, 500, 550, 600, 650, 700"
         }
