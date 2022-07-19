@@ -145,8 +145,8 @@ namespace Nexus.Sources
                         .ToList();
 
                     var resources = mode == "real_time"
-                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId, fileSource, distances)
-                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId, fileSource, distances);
+                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId, distances)
+                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId, distances);
 
                     var duplicateKeys = resources.GroupBy(x => x.Id)
                         .Where(group => group.Count() > 1)
@@ -401,7 +401,6 @@ namespace Nexus.Sources
             string instrument,
             TimeSpan samplePeriod,
             string fileSourceId,
-            FileSource fileSource,
             List<int> distances)
         {
             var line = file.ReadLine();
@@ -444,7 +443,6 @@ namespace Nexus.Sources
             string instrument,
             TimeSpan samplePeriod,
             string fileSourceId,
-            FileSource fileSource,
             List<int> distances)
         {
             var line = file.ReadLine();
