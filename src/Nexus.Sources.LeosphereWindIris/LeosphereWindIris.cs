@@ -393,10 +393,10 @@ namespace Nexus.Sources
 
             return line.Split(';')
                 .Skip(1)
-                .SelectMany(value =>
+                .SelectMany(originalName =>
                 {
-                    if (!TryEnforceNamingConvention(value, out var name))
-                        throw new Exception($"The name {value} is not a valid resource id.");
+                    if (!TryEnforceNamingConvention(originalName, out var name))
+                        throw new Exception($"The name {originalName} is not a valid resource id.");
                         
                     var resources = new List<Resource>();
 
@@ -410,7 +410,8 @@ namespace Nexus.Sources
 
                         var resource = new ResourceBuilder(id: resourceId)
                             .WithGroups($"{instrument} ({distance:D3} m, avg)")
-                            .WithProperty(StructuredFileDataSource.FileSourceKey, fileSourceId)
+                            .WithFileSourceId(fileSourceId)
+                            .WithOriginalName(originalName)
                             .AddRepresentation(representation)
                             .Build();
                         
@@ -435,10 +436,10 @@ namespace Nexus.Sources
 
             return line.Split(';')
                 .Skip(1)
-                .SelectMany(value =>
+                .SelectMany(originalName =>
                 {
-                    if (!TryEnforceNamingConvention(value, out var name))
-                        throw new Exception($"The name {value} is not a valid resource id.");
+                    if (!TryEnforceNamingConvention(originalName, out var name))
+                        throw new Exception($"The name {originalName} is not a valid resource id.");
 
                     var resources = new List<Resource>();
 
@@ -454,7 +455,8 @@ namespace Nexus.Sources
 
                             var resource = new ResourceBuilder(id: resourceId)
                                 .WithGroups($"{instrument} ({distance:D3} m)")
-                                .WithProperty(StructuredFileDataSource.FileSourceKey, fileSourceId)
+                                .WithFileSourceId(fileSourceId)
+                                .WithOriginalName(originalName)
                                 .AddRepresentation(representation)
                                 .Build();
                             
