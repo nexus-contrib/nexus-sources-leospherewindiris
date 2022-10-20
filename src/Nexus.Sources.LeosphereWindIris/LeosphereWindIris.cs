@@ -117,16 +117,6 @@ namespace Nexus.Sources
 
                     var samplePeriod = TimeSpan.Parse(samplePeriodString);
 
-                    var distancesString = additionalProperties.GetStringValue("Distances");
-
-                    if (distancesString is null)
-                        throw new Exception("The configuration parameter Distances is required.");
-
-                    var distances = distancesString
-                        .Split(",")
-                        .Select(value => int.Parse(value))
-                        .ToList();
-
                     var resources = mode == "real_time"
                         ? GetRawResources(file, instrument, samplePeriod, fileSourceId)
                         : GetAverageResources(file, instrument, samplePeriod, fileSourceId);
