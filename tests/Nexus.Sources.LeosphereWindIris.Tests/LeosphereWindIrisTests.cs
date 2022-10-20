@@ -29,8 +29,8 @@ namespace Nexus.Sources.Tests
             var actualTimeRange = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
             // assert
-            var expectedIds = new List<string>() { "Lidar_050m_3_LOS_index", "Lidar_080m_3_LOS_index" };
-            var expectedGroups = new List<string>() { "Lidar (050 m)", "Lidar (080 m)" };
+            var expectedIds = new List<string>() { "Lidar_3_LOS_index", "Lidar_0_LOS_index" };
+            var expectedGroups = new List<string>() { "Lidar", "Lidar" };
             var expectedStartDate = new DateTime(2020, 07, 28, 00, 00, 00, DateTimeKind.Utc);
             var expectedEndDate = new DateTime(2020, 08, 01, 00, 10, 00, DateTimeKind.Utc);
 
@@ -98,9 +98,10 @@ namespace Nexus.Sources.Tests
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_220m_0_RWS");
+            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_0_RWS");
             var representation = resource.Representations.First();
-            var catalogItem = new CatalogItem(catalog, resource, representation);
+            var parameters = new Dictionary<string, string>() { ["d"] = "220" };
+            var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 
             var begin = new DateTime(2020, 08, 01, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
@@ -142,9 +143,10 @@ namespace Nexus.Sources.Tests
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_050m_HWS_hub");
+            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_HWS_hub");
             var representation = resource.Representations.First();
-            var catalogItem = new CatalogItem(catalog, resource, representation);
+            var parameters = new Dictionary<string, string>() { ["d"] = "50" };
+            var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 
             var begin = new DateTime(2020, 07, 28, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 07, 29, 0, 0, 0, DateTimeKind.Utc);

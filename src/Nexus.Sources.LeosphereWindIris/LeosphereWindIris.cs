@@ -128,8 +128,8 @@ namespace Nexus.Sources
                         .ToList();
 
                     var resources = mode == "real_time"
-                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId, distances)
-                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId, distances);
+                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId)
+                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId);
 
                     var duplicateKeys = resources.GroupBy(x => x.Id)
                         .Where(group => group.Count() > 1)
@@ -166,10 +166,20 @@ namespace Nexus.Sources
         {
             return Task.Run(() =>
             {
-                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 3);
+                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 2);
                 var instrument = resourceIdParts[0];
-                var distance = int.Parse(resourceIdParts[1].Substring(0, 3));
-                var resourceName = resourceIdParts[2];
+                var resourceName = resourceIdParts[1];
+
+                if (info.CatalogItem.Parameters is not null &&
+                    info.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
+                    int.TryParse(distanceString, out var distance))
+                {
+                    // do nothing
+                }
+                else
+                {
+                    throw new Exception("The distance parameter is required.");
+                }
 
                 var lines = File.ReadAllLines(info.FilePath);
                 (var columns, var distances) = GetAverageFileParameters(lines);
@@ -237,11 +247,21 @@ namespace Nexus.Sources
         {
             return Task.Run(() =>
             {
-                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 4);
+                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 3);
                 var instrument = resourceIdParts[0];
-                var distance = int.Parse(resourceIdParts[1].Substring(0, 3));
-                var beam = int.Parse(resourceIdParts[2]);
-                var resourceName = resourceIdParts[3];
+                var beam = int.Parse(resourceIdParts[1]);
+                var resourceName = resourceIdParts[2];
+
+                if (info.CatalogItem.Parameters is not null &&
+                    info.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
+                    int.TryParse(distanceString, out var distance))
+                {
+                    // do nothing
+                }
+                else
+                {
+                    throw new Exception("The distance parameter is required.");
+                }
 
                 var lines = File.ReadAllLines(info.FilePath);
                 (var columns, var distances, var firstBeam) = GetRawFileParameters(lines);
@@ -379,17 +399,31 @@ namespace Nexus.Sources
             return (columns, distances, firstBeam);
         }
 
+private const string PARAMETER = @"
+{
+  ""type"": ""input-integer"",
+  ""label"": ""Distance / m"",
+  ""default"": 0,
+  ""minimum"": 0,
+  ""maximum"": 10000
+}
+";
+
         private List<Resource> GetAverageResources(
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
-            string fileSourceId,
-            List<int> distances)
+            string fileSourceId)
         {
             var line = file.ReadLine();
 
             if (line is null)
                 throw new Exception("line is null");
+
+            var parameters = new Dictionary<string, JsonElement>
+            {
+                ["d"] = JsonSerializer.Deserialize<JsonElement>(PARAMETER)
+            };
 
             return line.Split(';')
                 .Skip(1)
@@ -400,23 +434,21 @@ namespace Nexus.Sources
                         
                     var resources = new List<Resource>();
 
-                    foreach (var distance in distances)
-                    {
-                        var representation = new Representation(
-                            dataType: NexusDataType.FLOAT64,
-                            samplePeriod: samplePeriod);
+                    var representation = new Representation(
+                        dataType: NexusDataType.FLOAT64,
+                        samplePeriod,
+                        parameters);
 
-                        var resourceId = $"{instrument}_{distance:D3}m_{name}";
+                    var resourceId = $"{instrument}_{name}";
 
-                        var resource = new ResourceBuilder(id: resourceId)
-                            .WithGroups($"{instrument} ({distance:D3} m, avg)")
-                            .WithFileSourceId(fileSourceId)
-                            .WithOriginalName(originalName)
-                            .AddRepresentation(representation)
-                            .Build();
-                        
-                        resources.Add(resource);
-                    }
+                    var resource = new ResourceBuilder(id: resourceId)
+                        .WithGroups($"{instrument} (avg)")
+                        .WithFileSourceId(fileSourceId)
+                        .WithOriginalName(originalName)
+                        .AddRepresentation(representation)
+                        .Build();
+                    
+                    resources.Add(resource);
 
                     return resources;
                 }).ToList();
@@ -426,13 +458,17 @@ namespace Nexus.Sources
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
-            string fileSourceId,
-            List<int> distances)
+            string fileSourceId)
         {
             var line = file.ReadLine();
 
             if (line is null)
                 throw new Exception("line is null");
+
+            var parameters = new Dictionary<string, JsonElement>
+            {
+                ["d"] = JsonSerializer.Deserialize<JsonElement>(PARAMETER)
+            };
 
             return line.Split(';')
                 .Skip(1)
@@ -445,23 +481,21 @@ namespace Nexus.Sources
 
                     for (int i = 0; i < 4; i++)
                     {
-                        foreach (var distance in distances)
-                        {
-                            var representation = new Representation(
-                                dataType: NexusDataType.FLOAT64,
-                                samplePeriod: samplePeriod);
+                        var representation = new Representation(
+                            dataType: NexusDataType.FLOAT64,
+                            samplePeriod,
+                            parameters);
 
-                            var resourceId = $"{instrument}_{distance:D3}m_{(i + 3) % 4}_{name}";
+                        var resourceId = $"{instrument}_{(i + 3) % 4}_{name}";
 
-                            var resource = new ResourceBuilder(id: resourceId)
-                                .WithGroups($"{instrument} ({distance:D3} m)")
-                                .WithFileSourceId(fileSourceId)
-                                .WithOriginalName(originalName)
-                                .AddRepresentation(representation)
-                                .Build();
-                            
-                            resources.Add(resource);
-                        }
+                        var resource = new ResourceBuilder(id: resourceId)
+                            .WithGroups($"{instrument}")
+                            .WithFileSourceId(fileSourceId)
+                            .WithOriginalName(originalName)
+                            .AddRepresentation(representation)
+                            .Build();
+                        
+                        resources.Add(resource);
                     }                   
 
                     return resources;

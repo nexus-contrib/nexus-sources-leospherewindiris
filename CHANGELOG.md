@@ -1,3 +1,7 @@
+## v1.0.0-beta.14 - 2022-10-20
+
+Follow Nexus changes: Use parameterized resources to reduce number of groups and channel drastically.
+
 ## v1.0.0-beta.13 - 2022-10-04
 
 Follow Nexus changes.
