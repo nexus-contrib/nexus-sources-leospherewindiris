@@ -24,8 +24,8 @@ namespace Nexus.Sources.Tests
 
             // act
             var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var actualIds = actual.Resources.Take(2).Select(resource => resource.Id).ToList();
-            var actualGroups = actual.Resources.Take(2).SelectMany(resource => resource.Properties.GetStringArray("groups")).ToList();
+            var actualIds = actual.Resources!.Take(2).Select(resource => resource.Id).ToList();
+            var actualGroups = actual.Resources!.Take(2).SelectMany(resource => resource.Properties?.GetStringArray("groups")!).ToList();
             var actualTimeRange = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
             // assert
@@ -98,8 +98,8 @@ namespace Nexus.Sources.Tests
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_0_RWS");
-            var representation = resource.Representations.First();
+            var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_0_RWS");
+            var representation = resource.Representations!.First();
             var parameters = new Dictionary<string, string>() { ["d"] = "220" };
             var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 
@@ -143,8 +143,8 @@ namespace Nexus.Sources.Tests
 
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources.First(resource => resource.Id == "Lidar_HWS_hub");
-            var representation = resource.Representations.First();
+            var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_HWS_hub");
+            var representation = resource.Representations!.First();
             var parameters = new Dictionary<string, string>() { ["d"] = "50" };
             var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 

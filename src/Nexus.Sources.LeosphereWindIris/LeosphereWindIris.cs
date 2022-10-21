@@ -79,7 +79,7 @@ namespace Nexus.Sources
                 var instrument = fileSourceIdParts[0];
                 var mode = fileSourceIdParts[1];
                 var filePaths = default(string[]);
-                var catalogSourceFiles = fileSource.AdditionalProperties.GetStringArray("CatalogSourceFiles");
+                var catalogSourceFiles = fileSource.AdditionalProperties?.GetStringArray("CatalogSourceFiles");
 
                 if (catalogSourceFiles is not null)
                 {
@@ -110,7 +110,7 @@ namespace Nexus.Sources
                     if (additionalProperties is null)
                         throw new Exception("custom parameters is null");
 
-                    var samplePeriodString = additionalProperties.GetStringValue("SamplePeriod");
+                    var samplePeriodString = additionalProperties?.GetStringValue("SamplePeriod");
 
                     if (samplePeriodString is null)
                         throw new Exception("The configuration parameter SamplePeriod is required.");
