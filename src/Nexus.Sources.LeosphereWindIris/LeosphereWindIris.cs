@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using Nexus.DataModel;
-using Nexus.Extensibility;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Nexus.DataModel;
+using Nexus.Extensibility;
 
 namespace Nexus.Sources
 {
@@ -16,13 +16,13 @@ namespace Nexus.Sources
     {
         record CatalogDescription(
             string Title,
-            Dictionary<string, FileSource> FileSources, 
+            Dictionary<string, IReadOnlyList<FileSource>> FileSourceGroups, 
             JsonElement? AdditionalProperties);
 
         #region Fields
 
         private Dictionary<string, CatalogDescription> _config = default!;
-        private NumberFormatInfo _nfi;
+        private readonly NumberFormatInfo _nfi;
 
         #endregion
 
@@ -52,11 +52,11 @@ namespace Nexus.Sources
             _config = JsonSerializer.Deserialize<Dictionary<string, CatalogDescription>>(jsonString) ?? throw new Exception("config is null");
         }
 
-        protected override Task<Func<string, Dictionary<string, FileSource>>> GetFileSourceProviderAsync(
+        protected override Task<Func<string, Dictionary<string, IReadOnlyList<FileSource>>>> GetFileSourceProviderAsync(
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<Func<string, Dictionary<string, FileSource>>>(
-                catalogId => _config[catalogId].FileSources);
+            return Task.FromResult<Func<string, Dictionary<string, IReadOnlyList<FileSource>>>>(
+                catalogId => _config[catalogId].FileSourceGroups);
         }
 
         protected override Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken)
@@ -65,7 +65,7 @@ namespace Nexus.Sources
                 return Task.FromResult(_config.Select(entry => new CatalogRegistration(entry.Key, entry.Value.Title)).ToArray());
 
             else
-                return Task.FromResult(new CatalogRegistration[0]);
+                return Task.FromResult(Array.Empty<CatalogRegistration>());
         }
 
         protected override Task<ResourceCatalog> GetCatalogAsync(string catalogId, CancellationToken cancellationToken)
@@ -73,63 +73,66 @@ namespace Nexus.Sources
             var catalogDescription = _config[catalogId];
             var catalog = new ResourceCatalog(id: catalogId);
 
-            foreach (var (fileSourceId, fileSource) in catalogDescription.FileSources)
+            foreach (var (fileSourceId, fileSourceGroup) in catalogDescription.FileSourceGroups)
             {
-                var fileSourceIdParts = fileSourceId.Split(';');
-                var instrument = fileSourceIdParts[0];
-                var mode = fileSourceIdParts[1];
-                var filePaths = default(string[]);
-                var catalogSourceFiles = fileSource.AdditionalProperties?.GetStringArray("CatalogSourceFiles");
-
-                if (catalogSourceFiles is not null)
+                foreach (var fileSource in fileSourceGroup)
                 {
-                    filePaths = catalogSourceFiles
-                        .Where(filePath => filePath is not null)
-                        .Select(filePath => Path.Combine(Root, filePath!))
-                        .ToArray();
-                }
-                else
-                {
-                    if (!TryGetFirstFile(fileSource, out var filePath))
-                        continue;
+                    var fileSourceIdParts = fileSourceId.Split(';');
+                    var instrument = fileSourceIdParts[0];
+                    var mode = fileSourceIdParts[1];
+                    var filePaths = default(string[]);
+                    var catalogSourceFiles = fileSource.AdditionalProperties?.GetStringArray("CatalogSourceFiles");
 
-                    filePaths = new[] { filePath };
-                }
+                    if (catalogSourceFiles is not null)
+                    {
+                        filePaths = catalogSourceFiles
+                            .Where(filePath => filePath is not null)
+                            .Select(filePath => Path.Combine(Root, filePath!))
+                            .ToArray();
+                    }
+                    else
+                    {
+                        if (!TryGetFirstFile(fileSource, out var filePath))
+                            continue;
 
-                cancellationToken.ThrowIfCancellationRequested();
+                        filePaths = new[] { filePath };
+                    }
 
-                foreach (var filePath in filePaths)
-                {
-                    if (string.IsNullOrWhiteSpace(filePath))
-                        continue;
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                    using var file = new StreamReader(File.OpenRead(filePath));
+                    foreach (var filePath in filePaths)
+                    {
+                        if (string.IsNullOrWhiteSpace(filePath))
+                            continue;
 
-                    var additionalProperties = fileSource.AdditionalProperties;
+                        using var file = new StreamReader(File.OpenRead(filePath));
 
-                    if (additionalProperties is null)
-                        throw new Exception("custom parameters is null");
+                        var additionalProperties = fileSource.AdditionalProperties;
 
-                    var samplePeriodString = additionalProperties?.GetStringValue("SamplePeriod");
+                        if (additionalProperties is null)
+                            throw new Exception("custom parameters is null");
 
-                    if (samplePeriodString is null)
-                        throw new Exception("The configuration parameter SamplePeriod is required.");
+                        var samplePeriodString = additionalProperties?.GetStringValue("SamplePeriod");
 
-                    var samplePeriod = TimeSpan.Parse(samplePeriodString);
+                        if (samplePeriodString is null)
+                            throw new Exception("The configuration parameter SamplePeriod is required.");
 
-                    var resources = mode == "real_time"
-                        ? GetRawResources(file, instrument, samplePeriod, fileSourceId)
-                        : GetAverageResources(file, instrument, samplePeriod, fileSourceId);
+                        var samplePeriod = TimeSpan.Parse(samplePeriodString);
 
-                    var duplicateKeys = resources.GroupBy(x => x.Id)
-                        .Where(group => group.Count() > 1)
-                        .Select(group => group.Key);
+                        var resources = mode == "real_time"
+                            ? GetRawResources(file, instrument, samplePeriod, fileSourceId)
+                            : GetAverageResources(file, instrument, samplePeriod, fileSourceId);
 
-                    var newCatalog = new ResourceCatalogBuilder(id: catalogId)
-                        .AddResources(resources)
-                        .Build();
+                        var duplicateKeys = resources.GroupBy(x => x.Id)
+                            .Where(group => group.Count() > 1)
+                            .Select(group => group.Key);
 
-                    catalog = catalog.Merge(newCatalog);
+                        var newCatalog = new ResourceCatalogBuilder(id: catalogId)
+                            .AddResources(resources)
+                            .Build();
+
+                        catalog = catalog.Merge(newCatalog);
+                    }
                 }
             }
 
@@ -216,8 +219,7 @@ namespace Nexus.Sources
                         var byteResult = MemoryMarshal.AsBytes(result.AsSpan());
                         var offset = (int)info.FileOffset * info.CatalogItem.Representation.ElementSize;
 
-                        byteResult
-                            .Slice(offset)
+                        byteResult[offset..]
                             .CopyTo(info.Data.Span);
 
                         info
@@ -299,8 +301,7 @@ namespace Nexus.Sources
                         var byteResult = MemoryMarshal.AsBytes(result.AsSpan());
                         var offset = (int)info.FileOffset * info.CatalogItem.Representation.ElementSize;
 
-                        byteResult
-                            .Slice(offset)
+                        byteResult[offset..]
                             .CopyTo(info.Data.Span);
 
                         info
@@ -399,7 +400,7 @@ private const string PARAMETER = @"
 }
 ";
 
-        private List<Resource> GetAverageResources(
+        private static List<Resource> GetAverageResources(
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
@@ -444,7 +445,7 @@ private const string PARAMETER = @"
                 }).ToList();
         }
 
-        private List<Resource> GetRawResources(
+        private static List<Resource> GetRawResources(
             StreamReader file,
             string instrument,
             TimeSpan samplePeriod,
@@ -492,7 +493,7 @@ private const string PARAMETER = @"
                 }).ToList();
         }
 
-        private bool TryEnforceNamingConvention(string resourceId, [NotNullWhen(returnValue: true)] out string newResourceId)
+        private static bool TryEnforceNamingConvention(string resourceId, [NotNullWhen(returnValue: true)] out string newResourceId)
         {
             newResourceId = resourceId;
             newResourceId = Resource.InvalidIdCharsExpression.Replace(newResourceId, "_");

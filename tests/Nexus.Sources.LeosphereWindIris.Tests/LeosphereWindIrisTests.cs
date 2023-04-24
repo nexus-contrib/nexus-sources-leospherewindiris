@@ -26,7 +26,7 @@ namespace Nexus.Sources.Tests
             var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
             var actualIds = actual.Resources!.Take(2).Select(resource => resource.Id).ToList();
             var actualGroups = actual.Resources!.Take(2).SelectMany(resource => resource.Properties?.GetStringArray("groups")!).ToList();
-            var actualTimeRange = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
+            var (begin, end) = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
             // assert
             var expectedIds = new List<string>() { "Lidar_3_LOS_index", "Lidar_0_LOS_index" };
@@ -36,8 +36,8 @@ namespace Nexus.Sources.Tests
 
             Assert.True(expectedIds.SequenceEqual(actualIds));
             Assert.True(expectedGroups.SequenceEqual(actualGroups));
-            Assert.Equal(expectedStartDate, actualTimeRange.Begin);
-            Assert.Equal(expectedEndDate, actualTimeRange.End);
+            Assert.Equal(expectedStartDate, begin);
+            Assert.Equal(expectedEndDate, end);
         }
 
         [Fact]
@@ -70,14 +70,15 @@ namespace Nexus.Sources.Tests
             // assert
             var expected = new SortedDictionary<DateTime, double>(Enumerable.Range(0, 6).ToDictionary(
                     i => begin.AddDays(i),
-                    i => 0.0));
-
-            expected[begin.AddDays(0)] = (0 / 144.0 + 0 / 1) / 2; // 27.
-            expected[begin.AddDays(1)] = (0 / 144.0 + 1 / 1) / 2; // 28.
-            expected[begin.AddDays(2)] = (0 / 144.0 + 0 / 1) / 2; // 29.
-            expected[begin.AddDays(3)] = (0 / 144.0 + 0 / 1) / 2; // 30.
-            expected[begin.AddDays(4)] = (3 / 144.0 + 0 / 1) / 2; // 31.
-            expected[begin.AddDays(5)] = (1 / 144.0 + 0 / 1) / 2; // 01.
+                    i => 0.0))
+            {
+                [begin.AddDays(0)] = (0 / 144.0 + 0 / 1) / 2, // 27.
+                [begin.AddDays(1)] = (0 / 144.0 + 1 / 1) / 2, // 28.
+                [begin.AddDays(2)] = (0 / 144.0 + 0 / 1) / 2, // 29.
+                [begin.AddDays(3)] = (0 / 144.0 + 0 / 1) / 2, // 30.
+                [begin.AddDays(4)] = (3 / 144.0 + 0 / 1) / 2, // 31.
+                [begin.AddDays(5)] = (1 / 144.0 + 0 / 1) / 2 // 01.
+            };
 
             Assert.True(expected.SequenceEqual(new SortedDictionary<DateTime, double>(actual)));
         }
@@ -99,7 +100,7 @@ namespace Nexus.Sources.Tests
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
             var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_0_RWS");
-            var representation = resource.Representations!.First();
+            var representation = resource.Representations![0];
             var parameters = new Dictionary<string, string>() { ["d"] = "220" };
             var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 
@@ -144,7 +145,7 @@ namespace Nexus.Sources.Tests
             // act
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
             var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_HWS_hub");
-            var representation = resource.Representations!.First();
+            var representation = resource.Representations![0];
             var parameters = new Dictionary<string, string>() { ["d"] = "50" };
             var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 

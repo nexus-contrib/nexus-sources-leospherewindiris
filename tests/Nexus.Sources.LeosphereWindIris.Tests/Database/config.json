@@ -1,7 +1,7 @@
 {
   "/A/B/C": {
-    "FileSources": {
-      "Lidar;real_time": {
+    "FileSourceGroups": {
+      "Lidar;real_time": [{
         "PathSegments": [
           "'Lidar'",
           "yyyy-MM"
@@ -12,8 +12,8 @@
         "AdditionalProperties": {
           "SamplePeriod": "00:00:04"
         }
-      },
-      "Lidar;average": {
+      }],
+      "Lidar;average": [{
         "PathSegments": [
           "'Lidar'",
           "yyyy-MM"
@@ -24,7 +24,7 @@
         "AdditionalProperties": {
           "SamplePeriod": "00:10:00"
         }
-      }
+      }]
     }
   }
 }
