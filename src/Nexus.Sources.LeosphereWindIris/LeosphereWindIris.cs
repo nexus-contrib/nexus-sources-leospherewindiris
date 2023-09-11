@@ -139,36 +139,43 @@ namespace Nexus.Sources
             return Task.FromResult(catalog);
         }
 
-        protected override Task ReadSingleAsync(ReadInfo info, CancellationToken cancellationToken)
+        protected override Task ReadAsync(ReadInfo info, StructuredFileReadRequest[] readRequests, CancellationToken cancellationToken)
         {
-            var properties = info.CatalogItem.Resource.Properties;
+            return Task.Run(async () =>
+            {
+                foreach (var readRequest in readRequests)
+                {
+                    var properties = readRequest.CatalogItem.Resource.Properties;
 
-            if (properties is null)
-                throw new Exception("properties is null");
+                    if (properties is null)
+                        throw new Exception("properties is null");
 
-            var groups = properties.GetStringArray("groups")!;
+                    var groups = properties.GetStringArray("groups")!;
 
-            if (groups.Any(group => group!.Contains("avg")))
-                return ReadSingleAverageAsync(info, cancellationToken);
+                    if (groups.Any(group => group!.Contains("avg")))
+                        await ReadSingleAverageAsync(info, readRequest, cancellationToken);
 
-            else
-                return ReadSingleRawAsync(info, cancellationToken);
+                    else
+                        await ReadSingleRawAsync(info, readRequest, cancellationToken);
+                }
+            });
         }
 
-        private Task ReadSingleAverageAsync(ReadInfo info, CancellationToken cancellationToken)
+        private Task ReadSingleAverageAsync(ReadInfo info, StructuredFileReadRequest readRequest, CancellationToken cancellationToken)
         {
             return Task.Run(() =>
             {
-                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 2);
+                var resourceIdParts = readRequest.CatalogItem.Resource.Id.Split('_', 2);
                 var instrument = resourceIdParts[0];
                 var resourceName = resourceIdParts[1];
 
-                if (info.CatalogItem.Parameters is not null &&
-                    info.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
+                if (readRequest.CatalogItem.Parameters is not null &&
+                    readRequest.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
                     int.TryParse(distanceString, out var distance))
                 {
                     // do nothing
                 }
+
                 else
                 {
                     throw new Exception("The distance parameter is required.");
@@ -217,12 +224,12 @@ namespace Nexus.Sources
 
                         // write data
                         var byteResult = MemoryMarshal.AsBytes(result.AsSpan());
-                        var offset = (int)info.FileOffset * info.CatalogItem.Representation.ElementSize;
+                        var offset = (int)info.FileOffset * readRequest.CatalogItem.Representation.ElementSize;
 
                         byteResult[offset..]
-                            .CopyTo(info.Data.Span);
+                            .CopyTo(readRequest.Data.Span);
 
-                        info
+                        readRequest
                             .Status
                             .Span
                             .Fill(1);
@@ -235,17 +242,17 @@ namespace Nexus.Sources
             }, cancellationToken);
         }
 
-        private Task ReadSingleRawAsync(ReadInfo info, CancellationToken cancellationToken) 
+        private Task ReadSingleRawAsync(ReadInfo info, StructuredFileReadRequest readRequest, CancellationToken cancellationToken) 
         {
             return Task.Run(() =>
             {
-                var resourceIdParts = info.CatalogItem.Resource.Id.Split('_', 3);
+                var resourceIdParts = readRequest.CatalogItem.Resource.Id.Split('_', 3);
                 var instrument = resourceIdParts[0];
                 var beam = int.Parse(resourceIdParts[1]);
                 var resourceName = resourceIdParts[2];
 
-                if (info.CatalogItem.Parameters is not null &&
-                    info.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
+                if (readRequest.CatalogItem.Parameters is not null &&
+                    readRequest.CatalogItem.Parameters.TryGetValue("d", out var distanceString) &&
                     int.TryParse(distanceString, out var distance))
                 {
                     // do nothing
@@ -299,12 +306,12 @@ namespace Nexus.Sources
 
                         // write data
                         var byteResult = MemoryMarshal.AsBytes(result.AsSpan());
-                        var offset = (int)info.FileOffset * info.CatalogItem.Representation.ElementSize;
+                        var offset = (int)info.FileOffset * readRequest.CatalogItem.Representation.ElementSize;
 
                         byteResult[offset..]
-                            .CopyTo(info.Data.Span);
+                            .CopyTo(readRequest.Data.Span);
 
-                        info
+                        readRequest
                             .Status
                             .Span
                             .Fill(1);
