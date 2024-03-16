@@ -4,171 +4,170 @@ using Nexus.Extensibility;
 using System.Runtime.InteropServices;
 using Xunit;
 
-namespace Nexus.Sources.Tests
+namespace Nexus.Sources.Tests;
+
+public class LeosphereWindIrisTests
 {
-    public class LeosphereWindIrisTests
+    [Fact]
+    public async Task ProvidesCatalog()
     {
-        [Fact]
-        public async Task ProvidesCatalog()
+        // arrange
+        var dataSource = new LeosphereWindIris() as IDataSource;
+
+        var context = new DataSourceContext(
+            ResourceLocator: new Uri("Database", UriKind.Relative),
+            SystemConfiguration: default!,
+            SourceConfiguration: default!,
+            RequestConfiguration: default!);
+
+        await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+
+        // act
+        var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var actualIds = actual.Resources!.Take(2).Select(resource => resource.Id).ToList();
+        var actualGroups = actual.Resources!.Take(2).SelectMany(resource => resource.Properties?.GetStringArray("groups")!).ToList();
+        var (begin, end) = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
+
+        // assert
+        var expectedIds = new List<string>() { "Lidar_3_LOS_index", "Lidar_0_LOS_index" };
+        var expectedGroups = new List<string>() { "Lidar", "Lidar" };
+        var expectedStartDate = new DateTime(2020, 07, 28, 00, 00, 00, DateTimeKind.Utc);
+        var expectedEndDate = new DateTime(2020, 08, 01, 00, 10, 00, DateTimeKind.Utc);
+
+        Assert.True(expectedIds.SequenceEqual(actualIds));
+        Assert.True(expectedGroups.SequenceEqual(actualGroups));
+        Assert.Equal(expectedStartDate, begin);
+        Assert.Equal(expectedEndDate, end);
+    }
+
+    [Fact]
+    public async Task ProvidesDataAvailability()
+    {
+        // arrange
+        var dataSource = new LeosphereWindIris() as IDataSource;
+
+        var context = new DataSourceContext(
+            ResourceLocator: new Uri("Database", UriKind.Relative),
+            SystemConfiguration: default!,
+            SourceConfiguration: default!,
+            RequestConfiguration: default!);
+
+        await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+
+        // act
+        var actual = new Dictionary<DateTime, double>();
+        var begin = new DateTime(2020, 07, 27, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
+
+        var currentBegin = begin;
+
+        while (currentBegin < end)
         {
-            // arrange
-            var dataSource = new LeosphereWindIris() as IDataSource;
-
-            var context = new DataSourceContext(
-                ResourceLocator: new Uri("Database", UriKind.Relative),
-                SystemConfiguration: default!,
-                SourceConfiguration: default!,
-                RequestConfiguration: default!);
-
-            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
-
-            // act
-            var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var actualIds = actual.Resources!.Take(2).Select(resource => resource.Id).ToList();
-            var actualGroups = actual.Resources!.Take(2).SelectMany(resource => resource.Properties?.GetStringArray("groups")!).ToList();
-            var (begin, end) = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
-
-            // assert
-            var expectedIds = new List<string>() { "Lidar_3_LOS_index", "Lidar_0_LOS_index" };
-            var expectedGroups = new List<string>() { "Lidar", "Lidar" };
-            var expectedStartDate = new DateTime(2020, 07, 28, 00, 00, 00, DateTimeKind.Utc);
-            var expectedEndDate = new DateTime(2020, 08, 01, 00, 10, 00, DateTimeKind.Utc);
-
-            Assert.True(expectedIds.SequenceEqual(actualIds));
-            Assert.True(expectedGroups.SequenceEqual(actualGroups));
-            Assert.Equal(expectedStartDate, begin);
-            Assert.Equal(expectedEndDate, end);
+            actual[currentBegin] = await dataSource.GetAvailabilityAsync("/A/B/C", currentBegin, currentBegin.AddDays(1), CancellationToken.None);
+            currentBegin += TimeSpan.FromDays(1);
         }
 
-        [Fact]
-        public async Task ProvidesDataAvailability()
+        // assert
+        var expected = new SortedDictionary<DateTime, double>(Enumerable.Range(0, 6).ToDictionary(
+                i => begin.AddDays(i),
+                i => 0.0))
         {
-            // arrange
-            var dataSource = new LeosphereWindIris() as IDataSource;
+            [begin.AddDays(0)] = (0 / 144.0 + 0 / 1) / 2, // 27.
+            [begin.AddDays(1)] = (0 / 144.0 + 1 / 1) / 2, // 28.
+            [begin.AddDays(2)] = (0 / 144.0 + 0 / 1) / 2, // 29.
+            [begin.AddDays(3)] = (0 / 144.0 + 0 / 1) / 2, // 30.
+            [begin.AddDays(4)] = (3 / 144.0 + 0 / 1) / 2, // 31.
+            [begin.AddDays(5)] = (1 / 144.0 + 0 / 1) / 2 // 01.
+        };
 
-            var context = new DataSourceContext(
-                ResourceLocator: new Uri("Database", UriKind.Relative),
-                SystemConfiguration: default!,
-                SourceConfiguration: default!,
-                RequestConfiguration: default!);
+        Assert.True(expected.SequenceEqual(new SortedDictionary<DateTime, double>(actual)));
+    }
 
-            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+    [Fact]
+    public async Task CanReadFullDay_Real_Time()
+    {
+        // arrange
+        var dataSource = new LeosphereWindIris() as IDataSource;
 
-            // act
-            var actual = new Dictionary<DateTime, double>();
-            var begin = new DateTime(2020, 07, 27, 0, 0, 0, DateTimeKind.Utc);
-            var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
+        var context = new DataSourceContext(
+            ResourceLocator: new Uri("Database", UriKind.Relative),
+            SystemConfiguration: default!,
+            SourceConfiguration: default!,
+            RequestConfiguration: default!);
 
-            var currentBegin = begin;
+        await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-            while (currentBegin < end)
-            {
-                actual[currentBegin] = await dataSource.GetAvailabilityAsync("/A/B/C", currentBegin, currentBegin.AddDays(1), CancellationToken.None);
-                currentBegin += TimeSpan.FromDays(1);
-            }
+        // act
+        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_0_RWS");
+        var representation = resource.Representations![0];
+        var parameters = new Dictionary<string, string>() { ["d"] = "220" };
+        var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
 
-            // assert
-            var expected = new SortedDictionary<DateTime, double>(Enumerable.Range(0, 6).ToDictionary(
-                    i => begin.AddDays(i),
-                    i => 0.0))
-            {
-                [begin.AddDays(0)] = (0 / 144.0 + 0 / 1) / 2, // 27.
-                [begin.AddDays(1)] = (0 / 144.0 + 1 / 1) / 2, // 28.
-                [begin.AddDays(2)] = (0 / 144.0 + 0 / 1) / 2, // 29.
-                [begin.AddDays(3)] = (0 / 144.0 + 0 / 1) / 2, // 30.
-                [begin.AddDays(4)] = (3 / 144.0 + 0 / 1) / 2, // 31.
-                [begin.AddDays(5)] = (1 / 144.0 + 0 / 1) / 2 // 01.
-            };
+        var begin = new DateTime(2020, 08, 01, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
+        var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
-            Assert.True(expected.SequenceEqual(new SortedDictionary<DateTime, double>(actual)));
+        var result = new ReadRequest(catalogItem, data, status);
+        await dataSource.ReadAsync(begin, end, [result], default!, new Progress<double>(), CancellationToken.None);
+
+        // assert
+        void DoAssert()
+        {
+            var data = MemoryMarshal.Cast<byte, double>(result.Data.Span);
+
+            Assert.Equal(12.45, data[0]);
+            Assert.Equal(11.59, data[149]);
+            Assert.Equal(0, data[150]);
+
+            Assert.Equal(1, result.Status.Span[0]);
+            Assert.Equal(1, result.Status.Span[149]);
+            Assert.Equal(0, result.Status.Span[150]);
         }
 
-        [Fact]
-        public async Task CanReadFullDay_Real_Time()
+        DoAssert();
+    }
+
+    [Fact]
+    public async Task CanReadFullDay_Average()
+    {
+        // arrange
+        var dataSource = new LeosphereWindIris() as IDataSource;
+
+        var context = new DataSourceContext(
+            ResourceLocator: new Uri("Database", UriKind.Relative),
+            SystemConfiguration: default!,
+            SourceConfiguration: default!,
+            RequestConfiguration: default!);
+
+        await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+
+        // act
+        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_HWS_hub");
+        var representation = resource.Representations![0];
+        var parameters = new Dictionary<string, string>() { ["d"] = "50" };
+        var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
+
+        var begin = new DateTime(2020, 07, 28, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2020, 07, 29, 0, 0, 0, DateTimeKind.Utc);
+        var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
+
+        var result = new ReadRequest(catalogItem, data, status);
+        await dataSource.ReadAsync(begin, end, [result], default!, new Progress<double>(), CancellationToken.None);
+
+        // assert
+        void DoAssert()
         {
-            // arrange
-            var dataSource = new LeosphereWindIris() as IDataSource;
+            var data = MemoryMarshal.Cast<byte, double>(result.Data.Span);
 
-            var context = new DataSourceContext(
-                ResourceLocator: new Uri("Database", UriKind.Relative),
-                SystemConfiguration: default!,
-                SourceConfiguration: default!,
-                RequestConfiguration: default!);
+            Assert.Equal(9.76, data[0]);
+            Assert.Equal(9.32, data[143]);
 
-            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
-
-            // act
-            var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_0_RWS");
-            var representation = resource.Representations![0];
-            var parameters = new Dictionary<string, string>() { ["d"] = "220" };
-            var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
-
-            var begin = new DateTime(2020, 08, 01, 0, 0, 0, DateTimeKind.Utc);
-            var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
-            var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
-
-            var result = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, default!, new Progress<double>(), CancellationToken.None);
-
-            // assert
-            void DoAssert()
-            {
-                var data = MemoryMarshal.Cast<byte, double>(result.Data.Span);
-
-                Assert.Equal(12.45, data[0]);
-                Assert.Equal(11.59, data[149]);
-                Assert.Equal(0, data[150]);
-
-                Assert.Equal(1, result.Status.Span[0]);
-                Assert.Equal(1, result.Status.Span[149]);
-                Assert.Equal(0, result.Status.Span[150]);
-            }
-
-            DoAssert();
+            Assert.Equal(1, result.Status.Span[0]);
+            Assert.Equal(1, result.Status.Span[143]);
         }
 
-        [Fact]
-        public async Task CanReadFullDay_Average()
-        {
-            // arrange
-            var dataSource = new LeosphereWindIris() as IDataSource;
-
-            var context = new DataSourceContext(
-                ResourceLocator: new Uri("Database", UriKind.Relative),
-                SystemConfiguration: default!,
-                SourceConfiguration: default!,
-                RequestConfiguration: default!);
-
-            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
-
-            // act
-            var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_HWS_hub");
-            var representation = resource.Representations![0];
-            var parameters = new Dictionary<string, string>() { ["d"] = "50" };
-            var catalogItem = new CatalogItem(catalog, resource, representation, parameters);
-
-            var begin = new DateTime(2020, 07, 28, 0, 0, 0, DateTimeKind.Utc);
-            var end = new DateTime(2020, 07, 29, 0, 0, 0, DateTimeKind.Utc);
-            var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
-
-            var result = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { result }, default!, new Progress<double>(), CancellationToken.None);
-
-            // assert
-            void DoAssert()
-            {
-                var data = MemoryMarshal.Cast<byte, double>(result.Data.Span);
-
-                Assert.Equal(9.76, data[0]);
-                Assert.Equal(9.32, data[143]);
-
-                Assert.Equal(1, result.Status.Span[0]);
-                Assert.Equal(1, result.Status.Span[143]);
-            }
-
-            DoAssert();
-        }
+        DoAssert();
     }
 }
