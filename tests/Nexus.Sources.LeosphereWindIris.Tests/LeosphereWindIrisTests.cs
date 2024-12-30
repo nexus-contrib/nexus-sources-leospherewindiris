@@ -23,7 +23,7 @@ public class LeosphereWindIrisTests
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
         // act
-        var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var actual = await dataSource.EnrichCatalogAsync(new("/A/B/C"), CancellationToken.None);
         var actualIds = actual.Resources!.Take(2).Select(resource => resource.Id).ToList();
         var actualGroups = actual.Resources!.Take(2).SelectMany(resource => resource.Properties?.GetStringArray("groups")!).ToList();
         var (begin, end) = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
@@ -98,7 +98,7 @@ public class LeosphereWindIrisTests
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
         // act
-        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var catalog = await dataSource.EnrichCatalogAsync(new("/A/B/C"), CancellationToken.None);
         var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_0_RWS");
         var representation = resource.Representations![0];
         var parameters = new Dictionary<string, string>() { ["d"] = "220" };
@@ -108,7 +108,7 @@ public class LeosphereWindIrisTests
         var end = new DateTime(2020, 08, 02, 0, 0, 0, DateTimeKind.Utc);
         var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
-        var result = new ReadRequest(catalogItem, data, status);
+        var result = new ReadRequest(resource.Id, catalogItem, data, status);
         await dataSource.ReadAsync(begin, end, [result], default!, new Progress<double>(), CancellationToken.None);
 
         // assert
@@ -143,7 +143,7 @@ public class LeosphereWindIrisTests
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
         // act
-        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var catalog = await dataSource.EnrichCatalogAsync(new("/A/B/C"), CancellationToken.None);
         var resource = catalog.Resources!.First(resource => resource.Id == "Lidar_HWS_hub");
         var representation = resource.Representations![0];
         var parameters = new Dictionary<string, string>() { ["d"] = "50" };
@@ -153,7 +153,7 @@ public class LeosphereWindIrisTests
         var end = new DateTime(2020, 07, 29, 0, 0, 0, DateTimeKind.Utc);
         var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
 
-        var result = new ReadRequest(catalogItem, data, status);
+        var result = new ReadRequest(resource.Id, catalogItem, data, status);
         await dataSource.ReadAsync(begin, end, [result], default!, new Progress<double>(), CancellationToken.None);
 
         // assert

@@ -68,10 +68,9 @@ public class LeosphereWindIris : StructuredFileDataSource
             return Task.FromResult(Array.Empty<CatalogRegistration>());
     }
 
-    protected override Task<ResourceCatalog> GetCatalogAsync(string catalogId, CancellationToken cancellationToken)
+    protected override Task<ResourceCatalog> EnrichCatalogAsync(ResourceCatalog catalog, CancellationToken cancellationToken)
     {
-        var catalogDescription = _config[catalogId];
-        var catalog = new ResourceCatalog(id: catalogId);
+        var catalogDescription = _config[catalog.Id];
 
         foreach (var (fileSourceId, fileSourceGroup) in catalogDescription.FileSourceGroups)
         {
@@ -119,7 +118,7 @@ public class LeosphereWindIris : StructuredFileDataSource
                         .Where(group => group.Count() > 1)
                         .Select(group => group.Key);
 
-                    var newCatalog = new ResourceCatalogBuilder(id: catalogId)
+                    var newCatalog = new ResourceCatalogBuilder(id: catalog.Id)
                         .AddResources(resources)
                         .Build();
 
@@ -131,7 +130,7 @@ public class LeosphereWindIris : StructuredFileDataSource
         return Task.FromResult(catalog);
     }
 
-    protected override Task ReadAsync(ReadInfo info, StructuredFileReadRequest[] readRequests, CancellationToken cancellationToken)
+    protected override Task ReadAsync(ReadInfo info, ReadRequest[] readRequests, CancellationToken cancellationToken)
     {
         return Task.Run(async () =>
         {
@@ -149,7 +148,7 @@ public class LeosphereWindIris : StructuredFileDataSource
         }, cancellationToken);
     }
 
-    private Task ReadSingleAverageAsync(ReadInfo info, StructuredFileReadRequest readRequest, CancellationToken cancellationToken)
+    private Task ReadSingleAverageAsync(ReadInfo info, ReadRequest readRequest, CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
@@ -230,7 +229,7 @@ public class LeosphereWindIris : StructuredFileDataSource
         }, cancellationToken);
     }
 
-    private Task ReadSingleRawAsync(ReadInfo info, StructuredFileReadRequest readRequest, CancellationToken cancellationToken)
+    private Task ReadSingleRawAsync(ReadInfo info, ReadRequest readRequest, CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
@@ -385,15 +384,16 @@ public class LeosphereWindIris : StructuredFileDataSource
         return (columns, distances, firstBeam);
     }
 
-    private const string PARAMETER = @"
+    private const string PARAMETER = 
+$$"""
 {
-  ""type"": ""input-integer"",
-  ""label"": ""Distance / m"",
-  ""default"": 0,
-  ""minimum"": 0,
-  ""maximum"": 10000
+  "type": "input-integer",
+  "label": "Distance / m",
+  "default": 0,
+  "minimum": 0,
+  "maximum": 10000
 }
-";
+""";
 
     private static List<Resource> GetAverageResources(
         StreamReader file,
