@@ -1,3 +1,7 @@
+## v2.0.0-beta.36 - 2025-02-04
+
+- Fix GetCatalogRegistrationsAsync
+
 ## v2.0.0-beta.35 - 2025-02-04
 
 - Follow Nexus changes

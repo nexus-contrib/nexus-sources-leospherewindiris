@@ -51,11 +51,20 @@ public class LeosphereWindIris
     )
     {
         if (path == "/")
-            return Task.FromResult(Context.SourceConfiguration.AdditionalSettings.TitleMap
-                .Select(entry => new CatalogRegistration(entry.Key, entry.Value)).ToArray());
+        {
+            return Task.FromResult(Context.SourceConfiguration.FileSourceGroupsMap
+                .Select(entry =>
+                    {
+                        Context.SourceConfiguration.AdditionalSettings.TitleMap.TryGetValue(entry.Key, out var title);
+                        return new CatalogRegistration(entry.Key, title);
+                    }
+                ).ToArray());
+        }
 
         else
+        {
             return Task.FromResult(Array.Empty<CatalogRegistration>());
+        }
     }
 
     protected override Task<ResourceCatalog> EnrichCatalogAsync(
