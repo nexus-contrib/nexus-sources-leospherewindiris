@@ -2,23 +2,23 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Nexus.DataModel;
 using Nexus.Extensibility;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Xunit;
 
 namespace Nexus.Sources.Tests;
 
+using MySettings = StructuredFileDataSourceSettings<LeosphereWindIrisSettings, AdditionalFileSourceSettings>;
+
 public class LeosphereWindIrisTests
 {
+    private const string ROOT = "Database";
+
     [Fact]
     public async Task ProvidesCatalog()
     {
         // arrange
-        var dataSource = new LeosphereWindIris() as IDataSource;
-
-        var context = new DataSourceContext(
-            ResourceLocator: new Uri("Database", UriKind.Relative),
-            SystemConfiguration: default!,
-            SourceConfiguration: default!,
-            RequestConfiguration: default!);
+        var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
+        var context = BuildContext(ROOT);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -44,13 +44,8 @@ public class LeosphereWindIrisTests
     public async Task ProvidesDataAvailability()
     {
         // arrange
-        var dataSource = new LeosphereWindIris() as IDataSource;
-
-        var context = new DataSourceContext(
-            ResourceLocator: new Uri("Database", UriKind.Relative),
-            SystemConfiguration: default!,
-            SourceConfiguration: default!,
-            RequestConfiguration: default!);
+        var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
+        var context = BuildContext(ROOT);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -87,13 +82,8 @@ public class LeosphereWindIrisTests
     public async Task CanReadFullDay_Real_Time()
     {
         // arrange
-        var dataSource = new LeosphereWindIris() as IDataSource;
-
-        var context = new DataSourceContext(
-            ResourceLocator: new Uri("Database", UriKind.Relative),
-            SystemConfiguration: default!,
-            SourceConfiguration: default!,
-            RequestConfiguration: default!);
+        var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
+        var context = BuildContext(ROOT);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -132,13 +122,8 @@ public class LeosphereWindIrisTests
     public async Task CanReadFullDay_Average()
     {
         // arrange
-        var dataSource = new LeosphereWindIris() as IDataSource;
-
-        var context = new DataSourceContext(
-            ResourceLocator: new Uri("Database", UriKind.Relative),
-            SystemConfiguration: default!,
-            SourceConfiguration: default!,
-            RequestConfiguration: default!);
+        var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
+        var context = BuildContext(ROOT);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -169,5 +154,24 @@ public class LeosphereWindIrisTests
         }
 
         DoAssert();
+    }
+
+    private DataSourceContext<MySettings> BuildContext(string settingsFolderPath)
+    {
+        var configFilePath = Path.Combine(settingsFolderPath, "config.json");
+
+        if (!File.Exists(configFilePath))
+            throw new Exception($"The configuration file does not exist on path {configFilePath}.");
+
+        var jsonString = File.ReadAllText(configFilePath);
+        var sourceConfiguration = JsonSerializer.Deserialize<MySettings>(jsonString, JsonSerializerOptions.Web)!;
+
+        var context = new DataSourceContext<MySettings>(
+            ResourceLocator: new Uri(ROOT, UriKind.Relative),
+            SourceConfiguration: sourceConfiguration,
+            RequestConfiguration: default!
+        );
+
+        return context;
     }
 }

@@ -1,30 +1,33 @@
 {
-  "/A/B/C": {
-    "FileSourceGroups": {
+  "fileSourceGroupsMap": {
+    "/A/B/C": {
       "Lidar;real_time": [{
-        "PathSegments": [
+        "pathSegments": [
           "'Lidar'",
           "yyyy-MM"
         ],
-        "FileTemplate": "'WIPO0000000_real_time_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
-        "FilePeriod": "00:10:00",
-        "UtcOffset": "00:10:00",
-        "AdditionalProperties": {
-          "SamplePeriod": "00:00:04"
+        "fileTemplate": "'WIPO0000000_real_time_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
+        "filePeriod": "00:10:00",
+        "utcOffset": "00:10:00",
+        "additionalSettings": {
+          "samplePeriod": "00:00:04"
         }
       }],
       "Lidar;average": [{
-        "PathSegments": [
+        "pathSegments": [
           "'Lidar'",
           "yyyy-MM"
         ],
-        "FileTemplate": "'WIPO0000000_average_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
-        "FilePeriod": "1.00:00:00",
-        "UtcOffset": "1.00:00:00",
-        "AdditionalProperties": {
-          "SamplePeriod": "00:10:00"
+        "fileTemplate": "'WIPO0000000_average_data_'yyyy-MM-dd_HH-mm-ss'.csv'",
+        "filePeriod": "1.00:00:00",
+        "utcOffset": "1.00:00:00",
+        "additionalSettings": {
+          "samplePeriod": "00:10:00"
         }
       }]
     }
+  },
+  "additionalSettings": {
+    "titleMap": {}
   }
 }

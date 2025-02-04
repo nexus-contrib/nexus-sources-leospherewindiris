@@ -8,25 +8,33 @@ using Nexus.Extensibility;
 
 namespace Nexus.Sources;
 
+/// <summary>
+/// Leosphere wind iris settings.
+/// </summary>
+/// <param name="TitleMap">The catalog ID to title map.</param>
+public record LeosphereWindIrisSettings(
+    Dictionary<string, string> TitleMap
+);
+
+/// <summary>
+/// Additional file source settings.
+/// </summary>
+/// <param name="SamplePeriod">The sample period.</param>
+/// <param name="CatalogSourceFiles">The source files to populate the catalog with resources.</param>
+public record AdditionalFileSourceSettings(
+    TimeSpan SamplePeriod,
+    IReadOnlyList<string> CatalogSourceFiles
+);
+
 [ExtensionDescription(
     "Provides access to databases with Leosphere wind iris files.",
     "https://github.com/Apollo3zehn/nexus-sources-leospherewindiris",
     "https://github.com/Apollo3zehn/nexus-sources-leospherewindiris")]
-public class LeosphereWindIris : StructuredFileDataSource
+public class LeosphereWindIris 
+    : StructuredFileDataSource<LeosphereWindIrisSettings, AdditionalFileSourceSettings>
+    
 {
-    record CatalogDescription(
-        string Title,
-        Dictionary<string, IReadOnlyList<FileSource>> FileSourceGroups,
-        JsonElement? AdditionalProperties);
-
-    #region Fields
-
-    private Dictionary<string, CatalogDescription> _config = default!;
     private readonly NumberFormatInfo _nfi;
-
-    #endregion
-
-    #region Constructors
 
     public LeosphereWindIris()
     {
@@ -37,42 +45,27 @@ public class LeosphereWindIris : StructuredFileDataSource
         };
     }
 
-    #endregion
-
-    #region Methods
-
-    protected override async Task InitializeAsync(CancellationToken cancellationToken)
-    {
-        var configFilePath = Path.Combine(Root, "config.json");
-
-        if (!File.Exists(configFilePath))
-            throw new Exception($"Configuration file {configFilePath} not found.");
-
-        var jsonString = await File.ReadAllTextAsync(configFilePath, cancellationToken);
-        _config = JsonSerializer.Deserialize<Dictionary<string, CatalogDescription>>(jsonString) ?? throw new Exception("config is null");
-    }
-
-    protected override Task<Func<string, Dictionary<string, IReadOnlyList<FileSource>>>> GetFileSourceProviderAsync(
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult<Func<string, Dictionary<string, IReadOnlyList<FileSource>>>>(
-            catalogId => _config[catalogId].FileSourceGroups);
-    }
-
-    protected override Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken)
+    protected override Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(
+        string path, 
+        CancellationToken cancellationToken
+    )
     {
         if (path == "/")
-            return Task.FromResult(_config.Select(entry => new CatalogRegistration(entry.Key, entry.Value.Title)).ToArray());
+            return Task.FromResult(Context.SourceConfiguration.AdditionalSettings.TitleMap
+                .Select(entry => new CatalogRegistration(entry.Key, entry.Value)).ToArray());
 
         else
             return Task.FromResult(Array.Empty<CatalogRegistration>());
     }
 
-    protected override Task<ResourceCatalog> EnrichCatalogAsync(ResourceCatalog catalog, CancellationToken cancellationToken)
+    protected override Task<ResourceCatalog> EnrichCatalogAsync(
+        ResourceCatalog catalog, 
+        CancellationToken cancellationToken
+    )
     {
-        var catalogDescription = _config[catalog.Id];
+        var fileSourceGroupsMap = Context.SourceConfiguration.FileSourceGroupsMap[catalog.Id];
 
-        foreach (var (fileSourceId, fileSourceGroup) in catalogDescription.FileSourceGroups)
+        foreach (var (fileSourceId, fileSourceGroup) in fileSourceGroupsMap)
         {
             foreach (var fileSource in fileSourceGroup)
             {
@@ -80,7 +73,7 @@ public class LeosphereWindIris : StructuredFileDataSource
                 var instrument = fileSourceIdParts[0];
                 var mode = fileSourceIdParts[1];
                 var filePaths = default(string[]);
-                var catalogSourceFiles = fileSource.AdditionalProperties?.GetStringArray("CatalogSourceFiles");
+                var catalogSourceFiles = fileSource.AdditionalSettings.CatalogSourceFiles;
 
                 if (catalogSourceFiles is not null)
                 {
@@ -106,9 +99,7 @@ public class LeosphereWindIris : StructuredFileDataSource
 
                     using var file = new StreamReader(File.OpenRead(filePath));
 
-                    var additionalProperties = fileSource.AdditionalProperties ?? throw new Exception("custom parameters is null");
-                    var samplePeriodString = (additionalProperties.GetStringValue("SamplePeriod")) ?? throw new Exception("The configuration parameter SamplePeriod is required.");
-                    var samplePeriod = TimeSpan.Parse(samplePeriodString);
+                    var samplePeriod = fileSource.AdditionalSettings.SamplePeriod;
 
                     var resources = mode == "real_time"
                         ? GetRawResources(file, instrument, samplePeriod, fileSourceId)
@@ -130,7 +121,10 @@ public class LeosphereWindIris : StructuredFileDataSource
         return Task.FromResult(catalog);
     }
 
-    protected override Task ReadAsync(ReadInfo info, ReadRequest[] readRequests, CancellationToken cancellationToken)
+    protected override Task ReadAsync(
+        ReadInfo<AdditionalFileSourceSettings> info, 
+        ReadRequest[] readRequests, CancellationToken cancellationToken
+    )
     {
         return Task.Run(async () =>
         {
@@ -148,7 +142,11 @@ public class LeosphereWindIris : StructuredFileDataSource
         }, cancellationToken);
     }
 
-    private Task ReadSingleAverageAsync(ReadInfo info, ReadRequest readRequest, CancellationToken cancellationToken)
+    private Task ReadSingleAverageAsync(
+        ReadInfo<AdditionalFileSourceSettings> info, 
+        ReadRequest readRequest, 
+        CancellationToken cancellationToken
+    )
     {
         return Task.Run(() =>
         {
@@ -229,7 +227,11 @@ public class LeosphereWindIris : StructuredFileDataSource
         }, cancellationToken);
     }
 
-    private Task ReadSingleRawAsync(ReadInfo info, ReadRequest readRequest, CancellationToken cancellationToken)
+    private Task ReadSingleRawAsync(
+        ReadInfo<AdditionalFileSourceSettings> info, 
+        ReadRequest readRequest, 
+        CancellationToken cancellationToken
+    )
     {
         return Task.Run(() =>
         {
@@ -489,6 +491,4 @@ $$"""
 
         return Resource.ValidIdExpression.IsMatch(newResourceId);
     }
-
-    #endregion
 }
