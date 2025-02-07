@@ -1,3 +1,7 @@
+## v2.0.0-beta.37 - 2025-02-07
+
+- Test XML docs
+
 ## v2.0.0-beta.36 - 2025-02-04
 
 - Fix GetCatalogRegistrationsAsync

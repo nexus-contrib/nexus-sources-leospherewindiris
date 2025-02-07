@@ -26,11 +26,13 @@ public record AdditionalFileSourceSettings(
     IReadOnlyList<string> CatalogSourceFiles
 );
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 [ExtensionDescription(
     "Provides access to databases with Leosphere wind iris files.",
     "https://github.com/Apollo3zehn/nexus-sources-leospherewindiris",
     "https://github.com/Apollo3zehn/nexus-sources-leospherewindiris")]
-public class LeosphereWindIris 
+public class LeosphereWindIris
     : StructuredFileDataSource<LeosphereWindIrisSettings, AdditionalFileSourceSettings>
     
 {
@@ -501,3 +503,5 @@ $$"""
         return Resource.ValidIdExpression.IsMatch(newResourceId);
     }
 }
+
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
