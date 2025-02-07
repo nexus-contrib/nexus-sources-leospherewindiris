@@ -7,7 +7,7 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Nexus.Sources.StructuredFile" Version="2.0.0-beta.39.101" GeneratePathProperty="true" />
+    <PackageReference Include="Nexus.Sources.StructuredFile" Version="2.0.0-beta.40" />
 
     <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.50">
       <ExcludeAssets>runtime;native</ExcludeAssets>

@@ -11,14 +11,12 @@ using MySettings = StructuredFileDataSourceSettings<LeosphereWindIrisSettings, A
 
 public class LeosphereWindIrisTests
 {
-    private const string ROOT = "Database";
-
     [Fact]
     public async Task ProvidesCatalog()
     {
         // arrange
         var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
-        var context = BuildContext(ROOT);
+        var context = BuildContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -45,7 +43,7 @@ public class LeosphereWindIrisTests
     {
         // arrange
         var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
-        var context = BuildContext(ROOT);
+        var context = BuildContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -83,7 +81,7 @@ public class LeosphereWindIrisTests
     {
         // arrange
         var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
-        var context = BuildContext(ROOT);
+        var context = BuildContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -123,7 +121,7 @@ public class LeosphereWindIrisTests
     {
         // arrange
         var dataSource = new LeosphereWindIris() as IDataSource<MySettings>;
-        var context = BuildContext(ROOT);
+        var context = BuildContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -156,9 +154,9 @@ public class LeosphereWindIrisTests
         DoAssert();
     }
 
-    private DataSourceContext<MySettings> BuildContext(string settingsFolderPath)
+    private DataSourceContext<MySettings> BuildContext()
     {
-        var configFilePath = Path.Combine(settingsFolderPath, "config.json");
+        var configFilePath = Path.Combine("Database", "config.json");
 
         if (!File.Exists(configFilePath))
             throw new Exception($"The configuration file does not exist on path {configFilePath}.");
@@ -167,7 +165,7 @@ public class LeosphereWindIrisTests
         var sourceConfiguration = JsonSerializer.Deserialize<MySettings>(jsonString, JsonSerializerOptions.Web)!;
 
         var context = new DataSourceContext<MySettings>(
-            ResourceLocator: new Uri(ROOT, UriKind.Relative),
+            ResourceLocator: new Uri("Database", UriKind.Relative),
             SourceConfiguration: sourceConfiguration,
             RequestConfiguration: default!
         );

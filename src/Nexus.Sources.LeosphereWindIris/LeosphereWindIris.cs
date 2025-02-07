@@ -9,9 +9,9 @@ using Nexus.Extensibility;
 namespace Nexus.Sources;
 
 /// <summary>
-/// Leosphere wind iris settings.
+/// Additional extension-specific settings.
 /// </summary>
-/// <param name="TitleMap">The catalog ID to title map.</param>
+/// <param name="TitleMap">The catalog ID to title map. Add an entry here to specify a custom catalog title.</param>
 public record LeosphereWindIrisSettings(
     Dictionary<string, string> TitleMap
 );
@@ -19,7 +19,7 @@ public record LeosphereWindIrisSettings(
 /// <summary>
 /// Additional file source settings.
 /// </summary>
-/// <param name="SamplePeriod">The sample period.</param>
+/// <param name="SamplePeriod">The sample period of the data.</param>
 /// <param name="CatalogSourceFiles">The source files to populate the catalog with resources.</param>
 public record AdditionalFileSourceSettings(
     TimeSpan SamplePeriod,
