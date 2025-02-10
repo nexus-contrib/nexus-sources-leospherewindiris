@@ -23,7 +23,7 @@ public record LeosphereWindIrisSettings(
 /// <param name="CatalogSourceFiles">The source files to populate the catalog with resources.</param>
 public record AdditionalFileSourceSettings(
     TimeSpan SamplePeriod,
-    IReadOnlyList<string> CatalogSourceFiles
+    string[]? CatalogSourceFiles
 );
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

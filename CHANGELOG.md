@@ -1,3 +1,7 @@
+## v2.0.0-beta.39 - 2025-02-10
+
+- Fix settings type definition
+
 ## v2.0.0-beta.38 - 2025-02-10
 
 - Test XML docs
