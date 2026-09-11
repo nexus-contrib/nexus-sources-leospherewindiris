@@ -134,7 +134,7 @@ public class LeosphereWindIris
 
     protected override Task ReadAsync(
         ReadInfo<AdditionalFileSourceSettings> info, 
-        ReadRequest[] readRequests, CancellationToken cancellationToken
+        StructuredFileReadRequest[] readRequests, CancellationToken cancellationToken
     )
     {
         return Task.Run(async () =>
@@ -155,7 +155,7 @@ public class LeosphereWindIris
 
     private Task ReadSingleAverageAsync(
         ReadInfo<AdditionalFileSourceSettings> info, 
-        ReadRequest readRequest, 
+        StructuredFileReadRequest readRequest, 
         CancellationToken cancellationToken
     )
     {
@@ -240,7 +240,7 @@ public class LeosphereWindIris
 
     private Task ReadSingleRawAsync(
         ReadInfo<AdditionalFileSourceSettings> info, 
-        ReadRequest readRequest, 
+        StructuredFileReadRequest readRequest, 
         CancellationToken cancellationToken
     )
     {
@@ -430,7 +430,7 @@ $$"""
                 var resources = new List<Resource>();
 
                 var representation = new Representation(
-                    dataType: NexusDataType.FLOAT64,
+                    dataType: NexusDataType.Float64,
                     samplePeriod,
                     parameters);
 
@@ -438,9 +438,11 @@ $$"""
 
                 var resource = new ResourceBuilder(id: resourceId)
                     .WithGroups($"{instrument} (avg)")
-                    .WithFileSourceId(fileSourceId)
                     .WithOriginalName(originalName)
-                    .AddRepresentation(representation)
+                    .AddRepresentations(new Dictionary<Representation, string>
+                    {
+                        [representation] = fileSourceId
+                    })
                     .Build();
 
                 resources.Add(resource);
@@ -473,7 +475,7 @@ $$"""
                 for (int i = 0; i < 4; i++)
                 {
                     var representation = new Representation(
-                        dataType: NexusDataType.FLOAT64,
+                        dataType: NexusDataType.Float64,
                         samplePeriod,
                         parameters);
 
@@ -481,9 +483,11 @@ $$"""
 
                     var resource = new ResourceBuilder(id: resourceId)
                         .WithGroups($"{instrument}")
-                        .WithFileSourceId(fileSourceId)
                         .WithOriginalName(originalName)
-                        .AddRepresentation(representation)
+                        .AddRepresentations(new Dictionary<Representation, string>
+                        {
+                            [representation] = fileSourceId
+                        })
                         .Build();
 
                     resources.Add(resource);
