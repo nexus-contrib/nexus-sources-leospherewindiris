@@ -1,3 +1,8 @@
+## v2.0.0-beta.42 - 2026-09-30
+
+- Update Nexus.Extensibility dependency to beta.58.
+- Update Nexus.Sources.StructuredFile dependency to beta.47.
+
 ## v2.0.0-beta.41 - 2026-09-17
 
 - Follow Nexus changes.
